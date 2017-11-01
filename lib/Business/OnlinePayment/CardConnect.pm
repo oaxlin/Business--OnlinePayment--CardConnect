@@ -249,6 +249,7 @@ sub submit {
         'Post Authorization' => 'capture',
         'Void' => 'void',
         'Auth Reversal' => 'void',
+        'Credit' => 'refund',
     };
     my $action = $action_map->{$content{'action'}} || die "Unsupported action: ".$content{'action'};
     die 'Amount must contain a decimal' if defined $content{'amount'} && $content{'amount'} !~ /\./;
@@ -277,6 +278,30 @@ sub _cardconnect_void {
     return $response;
 }
 
+sub _cardconnect_refund {
+    my ($self) = @_;
+    my %content = $self->content();
+
+    my $post_data = {
+        retref  => $content{'order_number'},
+        merchid => $content{'merchantid'},
+    };
+    $post_data->{'amount'} = $content{'amount'} if defined $content{'amount'};
+
+    my $page = $self->_do_put_request( 'capture', $post_data );
+    my $response = $page->{'content_json'};
+
+    $self->is_success($response->{'respstat'} eq 'A' ? $response : undef);
+    $self->result_code($response->{'respstat'});
+    $self->order_number($response->{'retref'});
+    $self->error_message($response->{'resptext'});
+    $self->order_number($response->{'retref'});
+    $self->error_message($response->{'resptext'});
+    $self->card_token($response->{'token'});
+
+    return $response;
+}
+
 sub _cardconnect_capture {
     my ($self) = @_;
     my %content = $self->content();
@@ -285,6 +310,7 @@ sub _cardconnect_capture {
         retref =>  $content{'order_number'},
         merchid => $content{'merchantid'},
     };
+    $post_data->{'amount'} = $content{'amount'} if defined $content{'amount'};
     $self->_cardconnect_add_level2($post_data);
 
     my $page = $self->_do_put_request( 'capture', $post_data );
