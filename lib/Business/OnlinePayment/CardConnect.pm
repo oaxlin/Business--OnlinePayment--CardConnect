@@ -211,7 +211,7 @@ Default: Live
   $self->test_transaction(0);
 
   #Test
-  $self->test_transaction(1);
+  $self->test_transaction(1); # currently not different from live
 
   #Read current value
   $val = $self->test_transaction();
@@ -244,6 +244,7 @@ sub submit {
     my %content = $self->content();
 
     my $action_map = {
+        'Normal Authorization' => 'auth', # this method auto detects when capture is needed
         'Authorization Only' => 'auth',
         'Post Authorization' => 'capture',
         'Void' => 'void',
@@ -341,7 +342,6 @@ sub _cardconnect_auth {
             name     => $content{'first_name'}.' '.$content{'last_name'},
             amount   => $content{'amount'},
             currency => $content{'currency'} || "USD",
-            capture  => 'Y'
         }
     } elsif ($content{'card_number'}) {
         $content{'expiration'} =~ s/\///; # CardConnect doesn't want the / between MM and YY
@@ -365,7 +365,6 @@ sub _cardconnect_auth {
             ecomind  => "E",
             track    => undef,
             tokenize => "Y",
-            capture  => "Y",
             userfields => [
                 { description => $content{'description'} },
             ],
@@ -374,6 +373,7 @@ sub _cardconnect_auth {
     } else {
         die 'Unsupported payment method';
     }
+    $post_data->{'capture'} = "Y" if $content{'action'} eq 'Normal Authorization';
 
     my $page = $self->_do_put_request( 'auth', $post_data );
     my $response = $page->{'content_json'};
