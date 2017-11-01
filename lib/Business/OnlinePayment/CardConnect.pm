@@ -433,7 +433,19 @@ sub _do_put_request {
     my $page = HTTP::Tiny->new->request('PUT', $url, $options);
     $self->server_response( $page );
     warn Dumper $self->server_response if $DEBUG;
-    $page->{'content_json'} = eval { from_json $page->{'content'}; };
+    if ($page->{'status'} eq '200') {
+        $page->{'content_json'} = eval { from_json $page->{'content'}; }
+    } elsif ($page->{'status'} eq '401') {
+        $page->{'content_json'} = {
+            respstat => 'U',
+            resptext => 'This request requires authentication.',
+        };
+    } else {
+        $page->{'content_json'} = {
+            respstat => 'U',
+            resptext => 'Unknown response from payment gateway.',
+        };
+    }
     my $e = $@;
     die "Could not process JSON: ".$e if ($e);
     $self->response_code($page->{'status'});
