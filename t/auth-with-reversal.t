@@ -70,7 +70,7 @@ is $client->path(),             '/cardconnect/rest/auth',            'Path match
 
 
 my $void_data = {
-    action       => 'Void',
+    action       => 'Auth Reversal',
     order_number => $client->order_number,
 };
 $void_data->{$_} = $data->{$_} foreach qw(login password merchantid amount);
@@ -79,9 +79,9 @@ $void_client->content(%$void_data);
 $void_client->test_transaction(1); # doesn't really do anything in CardConnect since they don't have a sandbox
 $success = $void_client->submit();
 
-ok $void_client->is_success(), 'Void successful'
+ok $void_client->is_success(), 'Auth Reversal successful'
   or do { diag $void_client->error_message(); diag 'viod failed cannot continue'; done_testing(); exit; };
 
-is $void_client->is_success(), $success, 'Void success matches';
+is $void_client->is_success(), $success, 'Auth Reversal success matches';
 like $client->response_code(), qr/^\w+$/x, 'Response code is 200' or diag $client->response_code();
 like $client->order_number(),  qr/^\w+$/, 'Order number is a string';
