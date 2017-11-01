@@ -245,6 +245,7 @@ sub submit {
 
     my $action_map = {
         'Authorization Only' => 'auth',
+        'Post Authorization' => 'capture',
         'Void' => 'void',
     };
     my $action = $action_map->{$content{'action'}} || die "Unsupported action: ".$content{'action'};
@@ -272,6 +273,57 @@ sub _cardconnect_void {
     $self->error_message($response->{'resptext'});
 
     return $response;
+}
+
+sub _cardconnect_capture {
+    my ($self) = @_;
+    my %content = $self->content();
+
+    my $post_data = {
+        retref =>  $content{'order_number'},
+        merchid => $content{'merchantid'},
+    };
+    $self->_cardconnect_add_level2($post_data);
+
+    my $page = $self->_do_put_request( 'capture', $post_data );
+    my $response = $page->{'content_json'};
+
+    $self->is_success($response->{'respstat'} eq 'A' ? $response : undef);
+    $self->result_code($response->{'respstat'});
+    $self->order_number($response->{'retref'});
+    $self->error_message($response->{'resptext'});
+    $self->order_number($response->{'retref'});
+    $self->error_message($response->{'resptext'});
+    $self->card_token($response->{'token'});
+
+    return $response;
+}
+
+sub _cardconnect_add_level2 {
+    my ($self,$post_data) = @_;
+    my %content = $self->content();
+    $post_data->{'ponumber'} = $content{'po_number'} if defined $content{'po_number'};
+    $post_data->{'shiptozip'} = $content{'ship_zip'} if defined $content{'ship_zip'};
+    $post_data->{'taxamnt'} = $content{'tax'} if defined $content{'tax'};
+    if ( defined $content{'products'} && scalar( @{ $content{'products'} } ) < 100 ) {
+        my @products;
+        my $lineno = 0;
+        foreach my $productOrig ( @{ $content{'products'} } ) {
+            $lineno++;
+            my $item = {
+                "discamnt"    => $productOrig->{'discount'},
+                "unitcost"    => $productOrig->{'cost'},
+                "lineno"      => $lineno,
+                "description" => $productOrig->{'description'},
+                "taxamnt"     => $productOrig->{'tax'},
+                "quantity"    => $productOrig->{'quantity'},
+                "netamnt"     => $productOrig->{'amount'},
+                #"upc"         => "UPC-1",
+                #"material"    => "MATERIAL-1"
+            };
+            push @products, $item;
+        }
+    }
 }
 
 sub _cardconnect_auth {
@@ -317,28 +369,7 @@ sub _cardconnect_auth {
                 { description => $content{'description'} },
             ],
         };
-        $post_data->{'ponumber'} = $content{'po_number'} if defined $content{'po_number'};
-        $post_data->{'shiptozip'} = $content{'ship_zip'} if defined $content{'ship_zip'};
-        $post_data->{'taxamnt'} = $content{'tax'} if defined $content{'tax'};
-        if ( defined $content{'products'} && scalar( @{ $content{'products'} } ) < 100 ) {
-            my @products;
-            my $lineno = 0;
-            foreach my $productOrig ( @{ $content{'products'} } ) {
-                $lineno++;
-                my $item = {
-                    "discamnt"    => $productOrig->{'discount'},
-                    "unitcost"    => $productOrig->{'cost'},
-                    "lineno"      => $lineno,
-                    "description" => $productOrig->{'description'},
-                    "taxamnt"     => $productOrig->{'tax'},
-                    "quantity"    => $productOrig->{'quantity'},
-                    "netamnt"     => $productOrig->{'amount'},
-                    #"upc"         => "UPC-1",
-                    #"material"    => "MATERIAL-1"
-                };
-                push @products, $item;
-            }
-        }
+        $self->_cardconnect_add_level2($post_data);
     } else {
         die 'Unsupported payment method';
     }
