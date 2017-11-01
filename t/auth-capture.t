@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 
-use Test::More tests => 7;
+use Test::More tests => 10;
 use Module::Runtime qw( use_module );
 
 my $username = $ENV{PERL_CARDCONNECT_USERNAME};
@@ -47,6 +47,9 @@ my $success = $client->submit();
 ok $client->is_success(), 'Transaction successful'
   or do { diag $client->error_message(); diag 'auth failed cannot continue'; done_testing(); exit; };
 
+
+
+
 my $capture_data = {
     action       => 'Post Authorization',
     order_number => $client->order_number,
@@ -63,3 +66,22 @@ ok $capture_client->is_success(), 'capture successful'
 is $capture_client->is_success(), $success, 'capture success matches';
 like $client->response_code(), qr/^\w+$/x, 'Response code is 200' or diag $client->response_code();
 like $client->order_number(),  qr/^\w+$/, 'Order number is a string';
+
+
+
+
+my $void_data = {
+    action       => 'Void',
+    order_number => $capture_client->order_number,
+};
+$void_data->{$_} = $data->{$_} foreach qw(login password merchantid amount);
+my $void_client = new_ok( use_module('Business::OnlinePayment'), ['CardConnect'] );
+$void_client->content(%$void_data);
+$void_client->test_transaction(1); # doesn't really do anything in CardConnect since they don't have a sandbox
+$success = $void_client->submit();
+
+ok $void_client->is_success(), 'Void successful'
+  or do { diag $void_client->error_message(); diag 'viod failed cannot continue'; done_testing(); exit; };
+
+is $void_client->is_success(), $success, 'Void success matches';
+
