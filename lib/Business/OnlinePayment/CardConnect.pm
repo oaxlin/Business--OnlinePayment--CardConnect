@@ -247,6 +247,7 @@ sub submit {
         'Authorization Only' => 'auth',
         'Post Authorization' => 'capture',
         'Void' => 'void',
+        'Auth Reversal' => 'void',
     };
     my $action = $action_map->{$content{'action'}} || die "Unsupported action: ".$content{'action'};
     die 'Amount must contain a decimal' if defined $content{'amount'} && $content{'amount'} !~ /\./;
