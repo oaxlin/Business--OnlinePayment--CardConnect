@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 
-use Test::More tests => 10;
+use Test::More;
 use Module::Runtime qw( use_module );
 
 my $username = $ENV{PERL_CARDCONNECT_USERNAME};
@@ -85,3 +85,5 @@ ok $void_client->is_success(), 'Void successful'
 
 is $void_client->is_success(), $success, 'Void success matches';
 
+
+done_testing();

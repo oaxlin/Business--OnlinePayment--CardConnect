@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 
-use Test::More tests => 25;
+use Test::More;
 use Module::Runtime qw( use_module );
 
 my $username = $ENV{PERL_CARDCONNECT_USERNAME};
@@ -85,3 +85,5 @@ ok $void_client->is_success(), 'Auth Reversal successful'
 is $void_client->is_success(), $success, 'Auth Reversal success matches';
 like $client->response_code(), qr/^\w+$/x, 'Response code is 200' or diag $client->response_code();
 like $client->order_number(),  qr/^\w+$/, 'Order number is a string';
+
+done_testing();

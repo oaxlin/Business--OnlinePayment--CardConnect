@@ -4,7 +4,7 @@ use 5.010;
 use strict;
 use warnings;
 
-use Test::More tests => 3;
+use Test::More;
 use Module::Runtime qw( use_module );
 
 my $username = $ENV{PERL_CARDCONNECT_USERNAME};
@@ -48,3 +48,4 @@ ok $client->is_success(), 'Transaction successful'
   or do { diag $client->error_message(); diag 'auth failed cannot continue'; done_testing(); exit; };
 
 ok $success->{'batchid'}, 'Transaction capture data found';
+done_testing();
